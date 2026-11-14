@@ -1,0 +1,2 @@
+import { ShieldCheck } from "lucide-react";
+export default function Admin(){return <div className="empty-state admin-placeholder"><ShieldCheck size={36}/><h2>Admin tools are not connected yet</h2><p>Your current server.js does not include the admin item endpoints. We'll add this screen after those routes are implemented.</p></div>;}

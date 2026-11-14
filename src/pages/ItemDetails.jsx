@@ -1,0 +1,19 @@
+import { useEffect,useState } from "react";
+import { Link,useParams } from "react-router-dom";
+import { ArrowLeft,MapPin,CalendarDays,UserRound, Sparkles } from "lucide-react";
+import api,{getErrorMessage,imageSrc} from "../services/api";
+import Loading from "../components/Loading";
+
+export default function ItemDetails(){
+ const {id}=useParams();const [item,setItem]=useState(null);const [matches,setMatches]=useState([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [answer,setAnswer]=useState("");const [claiming,setClaiming]=useState(false);const [message,setMessage]=useState("");
+ useEffect(()=>{async function load(){try{const [all,matchData]=await Promise.all([api.get("/api/items"),api.get(`/api/items/${id}/matches`).catch(()=>({data:[]}))]);const found=all.data.find(x=>x._id===id);if(!found)throw new Error("Item not found.");setItem(found);setMatches(Array.isArray(matchData.data)?matchData.data:[]);}catch(e){setError(getErrorMessage(e));}finally{setLoading(false);}}load();},[id]);
+ async function claim(e){e.preventDefault();setMessage("");setError("");setClaiming(true);try{await api.post("/api/claims",{itemId:id,answer});setMessage("Your claim was submitted. The finder will review your answer.");setAnswer("");}catch(e){setError(getErrorMessage(e));}finally{setClaiming(false);}}
+ if(loading)return <Loading label="Loading item details..."/>;if(error&&!item)return <div className="alert error">{error}<p><Link to="/">Return to explore</Link></p></div>;
+ return <div className="page-stack"><Link to="/" className="back-link"><ArrowLeft size={16}/> Back to explore</Link><div className="detail-layout"><div className="detail-image-wrap"><img src={imageSrc(item.imageUrl)} alt={item.category}/></div><div className="detail-info"><span className={`type-pill inline-pill ${item.type}`}>{item.type==="lost"?"Lost item":"Found item"}</span><span className="eyebrow detail-eyebrow">ITEM REPORT</span><h1>{item.category}</h1><p className="detail-description">{item.description}</p><div className="detail-facts"><span><MapPin size={17}/>{item.location}</span><span><CalendarDays size={17}/>{new Date(item.date).toLocaleDateString()}</span><span><UserRound size={17}/>{item.reportedBy?.name||"Campus member"}</span></div><div className="status-line"><span>Status</span><strong>{item.status}</strong></div>
+ {item.type==="found"&&item.status!=="Verified"&&item.status!=="Returned"&&<form className="claim-box" onSubmit={claim}><h3>Is this yours?</h3><p>Answer the finder's verification question to submit a claim.</p><label>{item.verificationQuestion||"Describe a detail that proves ownership."}<textarea required rows="3" value={answer} onChange={e=>setAnswer(e.target.value)} placeholder="Your answer..."/></label><button className="button button-primary full-button" disabled={claiming||Boolean(message)}>{claiming?"Submitting...":"Submit a claim"}</button></form>}
+ {message&&<div className="alert success">{message}</div>}{error&&<div className="alert error">{error}</div>}
+ </div></div>
+ <section><div className="section-heading"><div><span className="eyebrow"><Sparkles size={13}/> SMART SUGGESTIONS</span><h2>Possible matches</h2><p className="muted">Top suggestions based on category, color, location and date.</p></div></div>
+ {matches.length?<div className="match-list">{matches.map(({item:m,score})=><div className="match-row" key={m._id}><img src={imageSrc(m.imageUrl)} alt={m.category}/><div className="match-main"><strong>{m.category} · {m.color}</strong><span>{m.location} · {new Date(m.date).toLocaleDateString()}</span></div><span className="match-score">{score}% match</span><Link to={`/items/${m._id}`} className="text-link">View</Link></div>)}</div>:<div className="subtle-empty">No strong matches found yet. We'll keep this report available for new matches.</div>}</section>
+ </div>;
+}
